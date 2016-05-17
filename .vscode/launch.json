@@ -1,0 +1,18 @@
+{
+	"version": "0.2.0",
+	"configurations": [
+		{
+			"name": "Love2D",
+			"type": "extensionHost",
+			"request": "launch",
+			"runtimeExecutable": "C:\Program Files\LOVE\love.exe",
+			"args": [
+				"--extensionDevelopmentPath=${workspaceRoot}"
+			],
+			"stopOnEntry": false,
+			"sourceMaps": true,
+			"outDir": "out",
+			"preLaunchTask": ""
+		}
+	]
+}

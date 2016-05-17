@@ -14,7 +14,7 @@ function love.load(arg)
     local start_time = love.timer.getTime()
     
     -- generate points field
-    pointsObj = pointsSetGenerator (30,0)
+    pointsObj = pointsSetGenerator (300,0)
     -- print(inspect(pointsObj))
     pointsList = flattenPointsObj(pointsObj)
     print(string.format("%.3f ms to Generate Points field", 1000 * (love.timer.getTime() - start_time)))    
@@ -193,38 +193,58 @@ function getSquareGridNeighbours (pu, pv, pointsObj)
     local u, v = 0, 0
     local neighbours = {}
     
-    -- tested assuming minu & minv = 0 and maxu & maxv = 10
-    if (minu < pu) and (pu < maxu) and (minv < pv) and  (pv < maxv) then  
-            table.insert(neighbours, {u = pu, v =  pv + 1})
-            table.insert(neighbours, {u = pu + 1, v =  pv})
-            table.insert(neighbours, {u = pu, v =  pv - 1})
-            table.insert(neighbours, {u = pu - 1, v =  pv})
-    elseif pu <= minu then           -- u = 0, 
-        if (minv < pv) and (pv < maxv) then     -- u = 0, v = 5
-            table.insert(neighbours, {u = pu, v =  pv + 1})
-            table.insert(neighbours, {u = pu + 1, v =  pv})
-            table.insert(neighbours, {u = pu, v =  pv - 1})
-        elseif  pv <= minv then      -- u =0, v = 0
-            table.insert(neighbours, {u = pu, v =  pv + 1})
-            table.insert(neighbours, {u = pu + 1, v =  pv})
-        elseif pv >= maxv  then      -- u =0, v = 10
-            table.insert(neighbours, {u = pu + 1, v =  pv})
-            table.insert(neighbours, {u = pu, v =  pv - 1})
-        end
-    elseif pu >= maxu then           -- u = 10
-        if (minv < pv) and (pv < maxv) then     -- u = 10, v = 5
-            table.insert(neighbours, {u = pu, v =  pv + 1})
-            table.insert(neighbours, {u = pu, v =  pv - 1})
-            table.insert(neighbours, {u = pu - 1, v =  pv})
-        elseif pv <= minv then       -- u = 10, v = 0
-            table.insert(neighbours, {u = pu, v =  pv + 1})
-            table.insert(neighbours, {u = pu - 1, v =  pv})
-        elseif pv >= maxv then       -- u = 10, v = 10
-            table.insert(neighbours, {u = pu, v =  pv - 1})
-            table.insert(neighbours, {u = pu - 1, v =  pv})
-        end
+    -- top left corner
+    if pu == minu and pv == minv then
+        table.insert(neighbours, {u = pu,       v =  pv + 1})
+        table.insert(neighbours, {u = pu + 1,   v =  pv})
+
+    -- top right corner
+    elseif pu == minu and pv == maxv then
+        table.insert(neighbours, {u = pu + 1,   v =  pv})
+        table.insert(neighbours, {u = pu,       v =  pv - 1})
+        
+    -- bottom left corner
+    elseif pu == maxu and pv == minv then
+        table.insert(neighbours, {u = pu,       v =  pv + 1})
+        table.insert(neighbours, {u = pu - 1,   v =  pv})
+        
+    -- bottom right corner
+    elseif pu == maxu and pv == maxv then
+        table.insert(neighbours, {u = pu,       v =  pv - 1})
+        table.insert(neighbours, {u = pu - 1,   v =  pv})
+        
+    -- top border
+    elseif pu == minu and (minv < pv) and (pv < maxv) then
+        table.insert(neighbours, {u = pu,       v =  pv + 1})
+        table.insert(neighbours, {u = pu + 1,   v =  pv})
+        table.insert(neighbours, {u = pu,       v =  pv - 1})
+        
+    -- bottom border
+    elseif pu == maxu and (minv < pv) and (pv < maxv) then
+        table.insert(neighbours, {u = pu,       v =  pv + 1})
+        table.insert(neighbours, {u = pu,       v =  pv - 1})
+        table.insert(neighbours, {u = pu - 1,   v =  pv})
+        
+    -- left border
+    elseif (minu < pu) and (pu < maxu) and pv == minv then
+        table.insert(neighbours, {u = pu,       v =  pv + 1})
+        table.insert(neighbours, {u = pu + 1,   v =  pv})
+        table.insert(neighbours, {u = pu - 1,   v =  pv})
+        
+    -- right border
+    elseif (minu < pu) and (pu < maxu) and pv == maxv then
+        table.insert(neighbours, {u = pu + 1,   v =  pv})
+        table.insert(neighbours, {u = pu,       v =  pv - 1})
+        table.insert(neighbours, {u = pu - 1,   v =  pv})
+        
+    -- center content
+    elseif (minu < pu) and (pu < maxu) and (minv < pv) and  (pv < maxv) then
+        table.insert(neighbours, {u = pu,       v =  pv + 1})
+        table.insert(neighbours, {u = pu + 1,   v =  pv})
+        table.insert(neighbours, {u = pu,       v =  pv - 1})
+        table.insert(neighbours, {u = pu - 1,   v =  pv})
     end
-    
+
     return neighbours
 end
 

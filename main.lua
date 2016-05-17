@@ -14,7 +14,7 @@ function love.load(arg)
     local start_time = love.timer.getTime()
     
     -- generate points field
-    pointsObj = pointsSetGenerator (13,0)
+    pointsObj = pointsSetGenerator (30,0)
     -- print(inspect(pointsObj))
     pointsList = flattenPointsObj(pointsObj)
     print(string.format("%.3f ms to Generate Points field", 1000 * (love.timer.getTime() - start_time)))    
@@ -25,11 +25,15 @@ function love.load(arg)
     -- print_r(dEdgesObj)
     -- dEdgesList = flattenDEdgesObj (dEdgesObj)
     -- print (inspect(dEdgesList))
-    print_r("XXX neighbours 2,4", getSquareGridNeighbours(2, 4, pointsObj))
+
     print(string.format("%.3f ms to Generate Debbinoi Edges", 1000 * (love.timer.getTime() - temp_time)))
     
     print ("----------------------------")
     print(string.format("%.3f ms Total Time Taken", 1000 * (love.timer.getTime() - start_time)))
+    
+    --test
+    local testNeighbours = getSquareGridNeighbours(2, 1, pointsObj)
+    print("Testing Neighbourds for 2,1: " .. inspect(testNeighbours))
 end
 
 function love.draw(dt)
@@ -104,7 +108,7 @@ function pointsSetGenerator (n,s)
         end
     end
     -- print (inspect(pointsObj))
-
+    print ("Generated points = " .. count .. " / " .. n)
     -- return pointsList
     return pointsObj
 end
@@ -113,10 +117,9 @@ function debbinoiEdgesGenerator (pointsObj)
     -- temp obj where we store pointsObj and the edge state for each point.
     local tempObj = pointsObj
     local tempEdgesObj = {}
-    local count = 0
+    local countEdges = 0
     
     for k, point in pairs(tempObj) do
-        -- print (getCenterFromIndex (point.u, point.v, point))
         
         -- for all points set the default state allEdgesDone=false
         -- point.allEdgesDone = false
@@ -134,30 +137,32 @@ function debbinoiEdgesGenerator (pointsObj)
 
             -- create edge
             -- For creating edges we take each point and create edges against each of its neighbors. After all edges for that point are set, set it allEdgesDone state to true. For any other point for which this point was a neighbour, it will not be considered for calculation is that state is true. This ensure that we get unique lines/edges.
-            local tempEdge = {p1 = {u=0, v=0}, p2 = {u=0, v=0}}
+            local tempEdge = {p1 = {u=0, v=0, x = 0, y = 0}, p2 = {u=0, v=0, x = 0, y = 0}}
             for _,neighbour in pairs (neighbours) do
 
-                tempEdge.p1.u = point.u
-                tempEdge.p1.v = point.v
-                tempEdge.p1.x = point.x
-                tempEdge.p1.y = point.y
-
-                tempEdge.p2.u = neighbour.u
-                tempEdge.p2.v = neighbour.v 
-                tempEdge.p2.x, tempEdge.p2.y = getCenterFromIndex(neighbour.u, neighbour.v , pointsObj)
+                local p2x, p2y = getCenterFromIndex(neighbour.u, neighbour.v , pointsObj)
                 print(inspect(neighbour))
-                -- print("xxx---xxx")
+                -- print("......")
                 -- table.insert(tempEdgesObj, tempEdge)
+                countEdges = countEdges + 1
+                -- print(countEdges)
+                -- print(inspect(tempEdge))
+                
+                -- tempEdgesObj[countEdges] = tempEdge
+                tempEdgesObj[countEdges] = 
+                {
+                    p1 = {u = point.u, v = point.v, x = point.x, y = point.y},
+                    p2 = {u = neighbour.u, v = neighbour.v, x = p2x, y = p2y}
+                }
 
-                print(inspect(tempEdge))
             end
-            count = count + 1
-            tempEdgesObj[count] = tempEdge
-            
+
+
+
             -- now that this point is used up, set point.allEdgesDone = true so we dont use it again in edge generation
             -- point.allEdgesDone = true
                         
-            print ("------------")
+            -- print ("------------")
             -- print("point.allEdgesDone value AFTER getNeighbours is: ", point.allEdgesDone)
         -- end
             -- make edges list

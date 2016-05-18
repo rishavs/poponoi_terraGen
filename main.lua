@@ -14,7 +14,7 @@ function love.load(arg)
     local start_time = love.timer.getTime()
     
     -- generate points field
-    pointsObj = pointsSetGenerator (300,0)
+    pointsObj = pointsSetGenerator (1000,0.4)
     -- print(inspect(pointsObj))
     pointsList = flattenPointsObj(pointsObj)
     print(string.format("%.3f ms to Generate Points field", 1000 * (love.timer.getTime() - start_time)))    
@@ -31,19 +31,24 @@ function love.load(arg)
     print ("----------------------------")
     print(string.format("%.3f ms Total Time Taken", 1000 * (love.timer.getTime() - start_time)))
     
-    --test
-    local testNeighbours = getSquareGridNeighbours(2, 1, pointsObj)
-    print("Testing Neighbourds for 2,1: " .. inspect(testNeighbours))
 end
 
 function love.draw(dt)
-    love.graphics.print("Hello World", 400, 300)
     
     love.graphics.setPointSize( 5 )
     love.graphics.setColor(255,0,0)
-    love.graphics.points(pointsList)
+    -- love.graphics.points(pointsList)
+    
+    -- using a for loop right now for debugging purposes
+    for k, point in pairs(pointsObj) do
+        love.graphics.setColor(255,0,0)
+        love.graphics.points(point.x, point.y)
+        
+        -- love.graphics.setColor(50,50,50)
+        -- love.graphics.print(point.u .. ", " .. point.v .. ":: " .. point.x .. ", " .. point.y, point.x-20, point.y+10)
+    end
      
-    love.graphics.setColor(50,50,0)
+    love.graphics.setColor(30,30,30)
     for k, point in pairs(dEdgesObj) do
         love.graphics.line(point.p1.x, point.p1.y, point.p2.x, point.p2.y) 
     end
@@ -61,30 +66,43 @@ end
 
 
 function pointsSetGenerator (n,s)
-    local pointsList = {} -- output
+
     local pointsObj = {}
     
-    
     -- n = number of points, d = max deviance allowed. between 0 and 0.5
-    local scrW = love.graphics.getWidth()
-    local scrH = love.graphics.getHeight()
+    local scrWr = love.graphics.getWidth()
+    local scrHr = love.graphics.getHeight()
     
-    -- n * d^2 = scrW * scrH
-    local d = roundToInt(math.sqrt(scrW * scrH / n))
+    -- n * d^2 = scrW * scrH. Rough value of d. used to calculate the smaller screen size.
+    local dr = roundToInt(math.sqrt(scrWr * scrHr / n))
     -- print(d)
     
     -- set random seed for maths lib
     math.randomseed( os.time() )
     
+    -- Now we redo the screen size and distance calculations for the reduced value
+    -- n = number of points, d = max deviance allowed. between 0 and 0.5
+    local scrW = love.graphics.getWidth() - dr/2
+    local scrH = love.graphics.getHeight() - dr/2
+    
+    -- n * d^2 = scrW * scrH. Rough value of d. used to calculate the smaller screen size.
+    local d = roundToInt(math.sqrt(scrWr * scrHr / n))
+    
     -- Generate points set 
+    
     local count = 0
-    local de = (d-d*s)            -- max distance form the edge
+    -- local de = d/2            -- max distance form the edge
+    
+    -- n = number of points, d = max deviance allowed. between 0 and 0.5
+    local scrW = love.graphics.getWidth() - d -- consider a reduced screensize so that the points dont touch the edge
+    local scrH = love.graphics.getHeight() - d
     
     local cntU = 0                -- counters for each loop
-    for y = de, scrH, d do
+    for y = 1.5*d, scrH, d do
+    
         cntU = cntU + 1
         local cntV = 0            -- counters for each loop
-        for x = de, scrW,d do
+        for x = 1.5*d, scrW, d do
             cntV = cntV + 1
             -- apply deviance to get randomness
             local dx = x + (d * math.random(0, s*100)/100 * ((math.random(1,2)*2)-3))
@@ -92,18 +110,12 @@ function pointsSetGenerator (n,s)
             
             dx = roundToInt(dx)
             dy = roundToInt(dy)
-            -- discard all points where the distance from the edge is less than de
-            if ((dx + d * s) <  scrW and (dy + d * s) < scrH) then
-                table.insert(pointsList, dx)
-                table.insert(pointsList, dy)
-                
-                table.insert(pointsObj, {x = dx, y = dy, u = cntU, v = cntV})
-               
-                
-                count = count + 1
-                
-                -- print (d, count, scrW, scrH, x, y, dx, dy)
-            end
+            
+            
+            table.insert(pointsObj, {x = dx, y = dy, u = cntU, v = cntV})
+
+            count = count + 1
+            -- print (count, cntU, cntV, dx, dy)
             
         end
     end
@@ -131,23 +143,24 @@ function debbinoiEdgesGenerator (pointsObj)
         -- if point.allEdgesDone == false then
             local neighbours = getSquareGridNeighbours(point.u, point.v, pointsObj)
             -- print (inspect(neighbours))
-            print ("------------")
+            -- print ("------------")
             -- print("point.allEdgesDone value before getNeighbours is: ", point.allEdgesDone)
-            print("Neighbours of " .. point.u .. ", " .. point.v .. " are :")
+            -- print("Neighbours of " .. point.u .. ", " .. point.v .. " are :")
 
             -- create edge
             -- For creating edges we take each point and create edges against each of its neighbors. After all edges for that point are set, set it allEdgesDone state to true. For any other point for which this point was a neighbour, it will not be considered for calculation is that state is true. This ensure that we get unique lines/edges.
+            
             local tempEdge = {p1 = {u=0, v=0, x = 0, y = 0}, p2 = {u=0, v=0, x = 0, y = 0}}
             for _,neighbour in pairs (neighbours) do
-
+  
                 local p2x, p2y = getCenterFromIndex(neighbour.u, neighbour.v , pointsObj)
-                print(inspect(neighbour))
+                -- print(inspect(neighbour))
                 -- print("......")
                 -- table.insert(tempEdgesObj, tempEdge)
                 countEdges = countEdges + 1
                 -- print(countEdges)
                 -- print(inspect(tempEdge))
-                
+
                 -- tempEdgesObj[countEdges] = tempEdge
                 tempEdgesObj[countEdges] = 
                 {
@@ -164,11 +177,10 @@ function debbinoiEdgesGenerator (pointsObj)
                         
             -- print ("------------")
             -- print("point.allEdgesDone value AFTER getNeighbours is: ", point.allEdgesDone)
-        -- end
-            -- make edges list
-            
-    end
 
+    end
+    
+    print("Generated Edges = " .. countEdges)
     -- print(inspect(tempObj))
     -- print(inspect(tempEdgesObj))
 
@@ -243,6 +255,7 @@ function getSquareGridNeighbours (pu, pv, pointsObj)
         table.insert(neighbours, {u = pu + 1,   v =  pv})
         table.insert(neighbours, {u = pu,       v =  pv - 1})
         table.insert(neighbours, {u = pu - 1,   v =  pv})
+
     end
 
     return neighbours

@@ -8,13 +8,14 @@ local pointsObj = {}
 local pointsList = {}
 local dEdgesObj = {}
 local dEdgesList = {}
+local popoPolyObj = {}
 
 function love.load(arg)
 
     local start_time = love.timer.getTime()
     
     -- generate points field
-    pointsObj = pointsSetGenerator (1000,0.4)
+    pointsObj = pointsSqrGridGenerator (300,0.4)
     -- print(inspect(pointsObj))
     pointsList = flattenPointsObj(pointsObj)
     print(string.format("%.3f ms to Generate Points field", 1000 * (love.timer.getTime() - start_time)))    
@@ -22,6 +23,12 @@ function love.load(arg)
     -- generate debbinoi edges
     local temp_time = love.timer.getTime()
     dEdgesObj = debbinoiEdgesGenerator ( pointsObj)
+    popoSqrGridPolyObj = popoSqrGridPolyGenerator ( pointsObj)
+    
+    for k, poly in pairs(popoPolyObj) do
+        -- print(inspect(poly.vertices))
+    end
+    
     -- print_r(dEdgesObj)
     -- dEdgesList = flattenDEdgesObj (dEdgesObj)
     -- print (inspect(dEdgesList))
@@ -35,10 +42,22 @@ end
 
 function love.draw(dt)
     
+    -- draw polygons
+    love.graphics.setColor(100,90,80)
+    for k, poly in pairs(popoSqrGridPolyObj) do
+        love.graphics.polygon("fill", poly.vertices)
+    end
+    
+    -- draw lines
+    love.graphics.setColor(30,30,30)
+    for k, point in pairs(dEdgesObj) do
+        love.graphics.line(point.p1.x, point.p1.y, point.p2.x, point.p2.y) 
+    end
+    
+    -- draw points
     love.graphics.setPointSize( 5 )
     love.graphics.setColor(255,0,0)
     -- love.graphics.points(pointsList)
-    
     -- using a for loop right now for debugging purposes
     for k, point in pairs(pointsObj) do
         love.graphics.setColor(255,0,0)
@@ -47,14 +66,9 @@ function love.draw(dt)
         -- love.graphics.setColor(50,50,50)
         -- love.graphics.print(point.u .. ", " .. point.v .. ":: " .. point.x .. ", " .. point.y, point.x-20, point.y+10)
     end
-     
-    love.graphics.setColor(30,30,30)
-    for k, point in pairs(dEdgesObj) do
-        love.graphics.line(point.p1.x, point.p1.y, point.p2.x, point.p2.y) 
-    end
 
-    love.graphics.setColor(255,255,255)
     -- show cursor position. mainly for debugging
+    love.graphics.setColor(255,255,255)
     local mouseX, mouseY = love.mouse.getPosition() -- get the position of the mouse
     love.graphics.print("X: ".. mouseX .. ", Y: " .. mouseY, mouseX-30, mouseY-15) -- draw the custom mouse image
 end
@@ -65,7 +79,7 @@ function love.update(dt)
 end
 
 
-function pointsSetGenerator (n,s)
+function pointsSqrGridGenerator (n,s)
 
     local pointsObj = {}
     
@@ -187,6 +201,165 @@ function debbinoiEdgesGenerator (pointsObj)
     return tempEdgesObj
 end
 
+function popoSqrGridPolyGenerator (fnPointsObj)
+
+    local tempPolyObj = {}
+    local countPoly = 0
+    local minu, minv = 1, 1 -- since our grid starts at 1,1
+    local maxu, maxv
+    -- minu, miny, maxu and maxv give the boundaries of u and v values. As its a square grid, we can just take the last point generated as max and starting as min.
+    -- any neighbour generated which is greater than these max values will be discarded.
+
+    for k, point in pairs(pointsObj) do
+        maxu = point.u
+        maxv = point.v
+        -- keep iterating till the last value is asigned to the max variables
+    end
+        
+    for k, point in pairs(fnPointsObj) do
+        
+        countPoly = countPoly + 1
+
+        -- for each neighbour find the halfway point on the line joining them
+        local pu, pv = point.u, point.v
+        
+        local N_MidPointX, N_MidPointY, E_MidPointX, E_MidPointY, S_MidPointX, S_MidPointY, W_MidPointX, W_MidPointY
+        local tempP1x, tempP1y, tempP2x, tempP2y, tempP3x, tempP3y, tempP4x, tempP4y
+        local tempPopoGridNbrs = {}
+        
+        -- make sure we send neighbours in a clockwise order starting from 12 o' clock
+        -- top left corner
+        if pu == minu and pv == minv then
+            N_MidPointX, N_MidPointY = point.x, 0
+
+            tempP1x, tempP1y = getCenterFromIndex (pu, pv+1)
+            E_MidPointX, E_MidPointY = (point.x + tempP1x)/2, (point.y + tempP1y)/2
+            
+            tempP2x, tempP2y = getCenterFromIndex (pu + 1, pv)
+            S_MidPointX, S_MidPointY = (point.x + tempP2x)/2, (point.y + tempP2y)/2
+            
+            W_MidPointX, W_MidPointY = 0, point.y
+
+        -- top right corner
+        elseif pu == minu and pv == maxv then
+            N_MidPointX, N_MidPointY = point.x, 0
+            
+            E_MidPointX, E_MidPointY = love.graphics.getWidth(), point.y
+            
+            tempP1x, tempP1y = getCenterFromIndex(pu + 1,  pv)
+            S_MidPointX, S_MidPointY = (point.x + tempP1x)/2, (point.y + tempP1y)/2
+            
+            tempP2x, tempP2y = getCenterFromIndex (pu, pv - 1)
+            W_MidPointX, W_MidPointY = (point.x + tempP2x)/2, (point.y + tempP2y)/2
+            
+        -- bottom right corner
+        elseif pu == maxu and pv == maxv then
+            tempP1x, tempP1y = getCenterFromIndex(pu - 1,pv)
+            N_MidPointX, N_MidPointY = (point.x + tempP1x)/2, (point.y + tempP1y)/2
+            
+            E_MidPointX, E_MidPointY = love.graphics.getWidth(), point.y
+            
+            S_MidPointX, S_MidPointY = point.x, love.graphics.getHeight()
+            
+            tempP2x, tempP2y = getCenterFromIndex (pu, pv - 1)
+            W_MidPointX, W_MidPointY = (point.x + tempP2x)/2, (point.y + tempP2y)/2
+            
+        -- bottom left corner
+        elseif pu == maxu and pv == minv then
+            tempP1x, tempP1y = getCenterFromIndex(pu - 1, pv)
+            N_MidPointX, N_MidPointY = (point.x + tempP1x)/2, (point.y + tempP1y)/2
+            
+            tempP2x, tempP2y = getCenterFromIndex (pu, pv + 1)
+            E_MidPointX, E_MidPointY = (point.x + tempP2x)/2, (point.y + tempP2y)/2
+            
+            S_MidPointX, S_MidPointY = point.x, love.graphics.getHeight()
+            
+            W_MidPointX, W_MidPointY = 0, point.y
+        
+        -- top border
+        elseif pu == minu and (minv < pv) and (pv < maxv) then
+            N_MidPointX, N_MidPointY = point.x, 0
+
+            tempP1x, tempP1y = getCenterFromIndex(pu, pv + 1)
+            E_MidPointX, E_MidPointY = (point.x + tempP1x)/2, (point.y + tempP1y)/2
+            
+            tempP2x, tempP2y = getCenterFromIndex (pu + 1, pv)
+            S_MidPointX, S_MidPointY = (point.x + tempP2x)/2, (point.y + tempP2y)/2
+            
+            tempP3x, tempP3y = getCenterFromIndex (pu, pv - 1)
+            W_MidPointX, W_MidPointY = (point.x + tempP3x)/2, (point.y + tempP3y)/2
+            
+        -- right border
+        elseif (minu < pu) and (pu < maxu) and pv == maxv then
+            tempP1x, tempP1y = getCenterFromIndex(pu - 1, pv)
+            N_MidPointX, N_MidPointY = (point.x + tempP1x)/2, (point.y + tempP1y)/2
+            
+            E_MidPointX, E_MidPointY = love.graphics.getWidth(), point.y
+            
+            tempP2x, tempP2y = getCenterFromIndex (pu + 1, pv)
+            S_MidPointX, S_MidPointY = (point.x + tempP2x)/2, (point.y + tempP2y)/2
+            
+            tempP3x, tempP3y = getCenterFromIndex (pu, pv - 1)
+            W_MidPointX, W_MidPointY = (point.x + tempP3x)/2, (point.y + tempP3y)/2
+            
+        -- bottom border
+        elseif pu == maxu and (minv < pv) and (pv < maxv) then
+            tempP1x, tempP1y = getCenterFromIndex(pu - 1, pv)
+            N_MidPointX, N_MidPointY = (point.x + tempP1x)/2, (point.y + tempP1y)/2
+            
+            tempP2x, tempP2y = getCenterFromIndex (pu, pv + 1)
+            E_MidPointX, E_MidPointY = (point.x + tempP2x)/2, (point.y + tempP2y)/2
+            
+            S_MidPointX, S_MidPointY = point.x, love.graphics.getHeight()
+            
+            tempP3x, tempP3y = getCenterFromIndex (pu, pv - 1)
+            W_MidPointX, W_MidPointY = (point.x + tempP3x)/2, (point.y + tempP3y)/2
+            
+        -- left border
+        elseif (minu < pu) and (pu < maxu) and pv == minv then
+            tempP1x, tempP1y = getCenterFromIndex(pu - 1, pv)
+            N_MidPointX, N_MidPointY = (point.x + tempP1x)/2, (point.y + tempP1y)/2
+            
+            tempP2x, tempP2y = getCenterFromIndex (pu, pv + 1)
+            E_MidPointX, E_MidPointY = (point.x + tempP2x)/2, (point.y + tempP2y)/2
+            
+            tempP3x, tempP3y = getCenterFromIndex (pu + 1, pv)
+            S_MidPointX, S_MidPointY = (point.x + tempP3x)/2, (point.y + tempP3y)/2
+
+            W_MidPointX, W_MidPointY = 0, point.y
+            
+        -- center content
+        elseif (minu < pu) and (pu < maxu) and (minv < pv) and  (pv < maxv) then
+            tempP1x, tempP1y = getCenterFromIndex(pu - 1, pv)
+            N_MidPointX, N_MidPointY = (point.x + tempP1x)/2, (point.y + tempP1y)/2
+            
+            tempP2x, tempP2y = getCenterFromIndex (pu, pv + 1)
+            E_MidPointX, E_MidPointY = (point.x + tempP2x)/2, (point.y + tempP2y)/2
+            
+            tempP3x, tempP3y = getCenterFromIndex (pu + 1, pv)
+            S_MidPointX, S_MidPointY = (point.x + tempP3x)/2, (point.y + tempP3y)/2
+            
+            tempP4x, tempP4y = getCenterFromIndex (pu, pv - 1)
+            W_MidPointX, W_MidPointY = (point.x + tempP4x)/2, (point.y + tempP4y)/2
+            
+        end
+
+        
+        tempPolyObj[countPoly] = 
+            {
+                center = {x = point.x, y = point.y},
+                coord = {u = point.u, v = point.v},
+                vertices = { N_MidPointX, N_MidPointY, E_MidPointX, E_MidPointY, S_MidPointX, S_MidPointY, W_MidPointX, W_MidPointY }
+            }
+
+    end
+    
+    print("Generated Polygons = " .. countPoly)
+    print(inspect(tempPolyObj))
+
+    return tempPolyObj
+end
+
 function getSquareGridNeighbours (pu, pv, pointsObj)
     local minu, minv = 1, 1 -- since our grid starts at 1,1
     local maxu, maxv
@@ -205,6 +378,7 @@ function getSquareGridNeighbours (pu, pv, pointsObj)
     local u, v = 0, 0
     local neighbours = {}
     
+    -- make sure we send neighbours in a clockwise order starting from 12 o' clock
     -- top left corner
     if pu == minu and pv == minv then
         table.insert(neighbours, {u = pu,       v =  pv + 1})
@@ -217,13 +391,13 @@ function getSquareGridNeighbours (pu, pv, pointsObj)
         
     -- bottom left corner
     elseif pu == maxu and pv == minv then
-        table.insert(neighbours, {u = pu,       v =  pv + 1})
         table.insert(neighbours, {u = pu - 1,   v =  pv})
+        table.insert(neighbours, {u = pu,       v =  pv + 1})
         
     -- bottom right corner
     elseif pu == maxu and pv == maxv then
-        table.insert(neighbours, {u = pu,       v =  pv - 1})
         table.insert(neighbours, {u = pu - 1,   v =  pv})
+        table.insert(neighbours, {u = pu,       v =  pv - 1})
         
     -- top border
     elseif pu == minu and (minv < pv) and (pv < maxv) then
@@ -233,29 +407,104 @@ function getSquareGridNeighbours (pu, pv, pointsObj)
         
     -- bottom border
     elseif pu == maxu and (minv < pv) and (pv < maxv) then
+        table.insert(neighbours, {u = pu - 1,   v =  pv})
         table.insert(neighbours, {u = pu,       v =  pv + 1})
         table.insert(neighbours, {u = pu,       v =  pv - 1})
-        table.insert(neighbours, {u = pu - 1,   v =  pv})
         
     -- left border
     elseif (minu < pu) and (pu < maxu) and pv == minv then
+        table.insert(neighbours, {u = pu - 1,   v =  pv})
         table.insert(neighbours, {u = pu,       v =  pv + 1})
         table.insert(neighbours, {u = pu + 1,   v =  pv})
-        table.insert(neighbours, {u = pu - 1,   v =  pv})
-        
+ 
     -- right border
     elseif (minu < pu) and (pu < maxu) and pv == maxv then
+        table.insert(neighbours, {u = pu - 1,   v =  pv})
         table.insert(neighbours, {u = pu + 1,   v =  pv})
         table.insert(neighbours, {u = pu,       v =  pv - 1})
-        table.insert(neighbours, {u = pu - 1,   v =  pv})
+
         
     -- center content
     elseif (minu < pu) and (pu < maxu) and (minv < pv) and  (pv < maxv) then
+        table.insert(neighbours, {u = pu - 1,   v =  pv})
         table.insert(neighbours, {u = pu,       v =  pv + 1})
         table.insert(neighbours, {u = pu + 1,   v =  pv})
         table.insert(neighbours, {u = pu,       v =  pv - 1})
-        table.insert(neighbours, {u = pu - 1,   v =  pv})
+    end
 
+    return neighbours
+end
+
+function getSqrPopoGridNbr (pu, pv, pointsObj)
+    local minu, minv = 1, 1 -- since our grid starts at 1,1
+    local maxu, maxv
+    -- minu, miny, maxu and maxv give the boundaries of u and v values. As its a square grid, we can just take the last point generated as max and starting as min.
+    -- any neighbour generated which is greater than these max values will be discarded.
+
+    for k, point in pairs(pointsObj) do
+        maxu = point.u
+        maxv = point.v
+        -- print(minu, minv, maxu, maxv)
+        -- keep iterating till the last value is asigned to the max variables
+    end
+    
+    -- print(minu, minv, maxu, maxv)
+    
+    local u, v = 0, 0
+    local neighbours = {}
+    
+    -- make sure we send neighbours in a clockwise order starting from 12 o' clock
+    -- top left corner
+    if pu == minu and pv == minv then
+        table.insert(neighbours, {u = pu,       v =  pv + 1})
+        table.insert(neighbours, {u = pu + 1,   v =  pv})
+
+    -- top right corner
+    elseif pu == minu and pv == maxv then
+        table.insert(neighbours, {u = pu + 1,   v =  pv})
+        table.insert(neighbours, {u = pu,       v =  pv - 1})
+        
+    -- bottom left corner
+    elseif pu == maxu and pv == minv then
+        table.insert(neighbours, {u = pu - 1,   v =  pv})
+        table.insert(neighbours, {u = pu,       v =  pv + 1})
+        
+    -- bottom right corner
+    elseif pu == maxu and pv == maxv then
+        table.insert(neighbours, {u = pu - 1,   v =  pv})
+        table.insert(neighbours, {u = pu,       v =  pv - 1})
+        
+    -- top border
+    elseif pu == minu and (minv < pv) and (pv < maxv) then
+        table.insert(neighbours, {u = pu,       v =  pv + 1})
+        table.insert(neighbours, {u = pu + 1,   v =  pv})
+        table.insert(neighbours, {u = pu,       v =  pv - 1})
+        
+    -- bottom border
+    elseif pu == maxu and (minv < pv) and (pv < maxv) then
+        table.insert(neighbours, {u = pu - 1,   v =  pv})
+        table.insert(neighbours, {u = pu,       v =  pv + 1})
+        table.insert(neighbours, {u = pu,       v =  pv - 1})
+        
+    -- left border
+    elseif (minu < pu) and (pu < maxu) and pv == minv then
+        table.insert(neighbours, {u = pu - 1,   v =  pv})
+        table.insert(neighbours, {u = pu,       v =  pv + 1})
+        table.insert(neighbours, {u = pu + 1,   v =  pv})
+ 
+    -- right border
+    elseif (minu < pu) and (pu < maxu) and pv == maxv then
+        table.insert(neighbours, {u = pu - 1,   v =  pv})
+        table.insert(neighbours, {u = pu + 1,   v =  pv})
+        table.insert(neighbours, {u = pu,       v =  pv - 1})
+
+        
+    -- center content
+    elseif (minu < pu) and (pu < maxu) and (minv < pv) and  (pv < maxv) then
+        table.insert(neighbours, {u = pu - 1,   v =  pv})
+        table.insert(neighbours, {u = pu,       v =  pv + 1})
+        table.insert(neighbours, {u = pu + 1,   v =  pv})
+        table.insert(neighbours, {u = pu,       v =  pv - 1})
     end
 
     return neighbours
@@ -295,7 +544,7 @@ function flattenDEdgesObj (dEdgesObj)
     return dEdgesList
 end
 
-function getCenterFromIndex (pu,pv, pointsObj)
+function getCenterFromIndex (pu,pv)
     for _, point in pairs(pointsObj) do
         if (pu == point.u and pv == point.v) then
             return point.x, point.y
